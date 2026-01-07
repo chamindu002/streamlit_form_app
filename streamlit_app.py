@@ -1,9 +1,7 @@
-import io, uuid
+import uuid
 from datetime import datetime, timezone
 import streamlit as st
 from supabase import create_client
-import streamlit as st
-
 
 # 1. Configuration
 st.set_page_config(page_title="Public Form", page_icon="📝")
@@ -14,6 +12,9 @@ try:
     SUPABASE_KEY = st.secrets["SUPABASE_ANON_KEY"]
 except FileNotFoundError:
     st.error("Secrets not found. Please ensure .streamlit/secrets.toml exists.")
+    st.stop()
+except KeyError:
+    st.error("Secrets found, but keys are missing. Check SUPABASE_URL and SUPABASE_ANON_KEY.")
     st.stop()
 
 BUCKET = "uploads"
@@ -58,13 +59,15 @@ if submit:
     with st.spinner("Uploading..."):
         try:
             # A. Upload Image to Storage
-            data = image.getvalue()
+            data = image.getvalue()  # Get raw bytes
+            
             # Create a unique path: Year/Month/Day/UUID.jpg
             path = f"{datetime.now(timezone.utc):%Y/%m/%d}/{uuid.uuid4()}.jpg"
 
+            # FIX: Upload 'data' directly (removed io.BytesIO wrapper)
             supabase.storage.from_(BUCKET).upload(
                 path,
-                io.BytesIO(data),
+                data,
                 file_options={"content-type": image.type}
             )
 
